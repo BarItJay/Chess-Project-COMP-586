@@ -32,6 +32,9 @@ public class MovePlate : MonoBehaviour
         {
             GameObject cp = controller.GetComponent<Game>().GetPosition(matrixX, matrixY);
 
+            if (cp.name == "white_king") controller.GetComponent<Game>().Winner("black");
+            if (cp.name == "black_king") controller.GetComponent<Game>().Winner("white");
+
             Destroy(cp);
         }
 
@@ -43,6 +46,8 @@ public class MovePlate : MonoBehaviour
         reference.GetComponent<Chessman>().SetCoords();
 
         controller.GetComponent<Game>().SetPosition(reference);
+
+        controller.GetComponent<Game>().NextTurn();
 
         reference.GetComponent<Chessman>().DestroyMovePlates();
     }

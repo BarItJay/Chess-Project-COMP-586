@@ -83,9 +83,13 @@ public class Chessman : MonoBehaviour
 
     private void OnMouseUp()
     {
-        DestroyMovePlates();
+        if(!controller.GetComponent<Game>().isGameOver() && controller.GetComponent<Game>().GetCurrentPlayer() == player)
+        {
+            DestroyMovePlates();
 
-        InitiateMovePlates();
+            InitiateMovePlates();
+        }
+        
     }
 
     public void DestroyMovePlates()
