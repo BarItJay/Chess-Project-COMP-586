@@ -114,20 +114,28 @@ public class Pieces: MonoBehaviour
 
     public void LineMovePlate(int xDir, int yDir) {
         Game sc = controller.GetComponent<Game>();
+        int x = xPos + xDir;
+        int y = yPos + yDir;
 
-        int x = xPos+xDir;
-        int y = yPos+yDir;
+        while (sc.PositionOnBoard(x, y)) {
+            GameObject pieceAtPosition = sc.GetPosition(x, y);
+            
+            if (pieceAtPosition == null) {
+                MovePlateSpawn(x, y);
+            } else {
+                Pieces otherPiece = pieceAtPosition.GetComponent<Pieces>();
+                
+                if (otherPiece != null && otherPiece.player != player) {
+                    MovePlateAttackSpawn(x, y);
+                }
+                break;
+            }
 
-        while(sc.PositionOnBoard(x,y) && sc.GetPosition(x,y) == null) {
-            MovePlateSpawn(x,y);
             x += xDir;
             y += yDir;
-        }
-
-        if(sc.PositionOnBoard(x,y) && sc.GetPosition(x,y).GetComponent<Pieces>().player != player) {
-            MovePlateAttackSpawn(x,y);
-        }
     }
+}
+
 
     public void LMovePlate() {
         foreach(var offset in new (int,int)[] {(1,2), (-1,2), (2,1), (2,-1), (1,-2), (-1,-2), (-2,1), (-2,-1)}) {
