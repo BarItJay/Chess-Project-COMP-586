@@ -69,5 +69,22 @@ public class Game : MonoBehaviour
         positions[cm.GetXBoard(), cm.GetYBoard()] = obj;
     }
 
-   
+    // In order to move chess pieces, make sure position is empty in order to move chess piece there
+    public void SetPositionEmpty(int x, int y)
+    {
+        positions[x, y] = null;
+    }
+
+   // Return game object at given position
+    public GameObject GetPosition(int x, int y)
+    {
+        return positions[x, y];
+    }
+
+    // check if position given is on board 
+    public bool PositionOnBoard(int x, int y)
+    {
+        if(x < 0 || y < 0 || x >= positions.GetLength(0) || y >= positions.GetLength(1)) return false;
+        return true; 
+    }
 }
