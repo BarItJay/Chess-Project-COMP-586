@@ -8,6 +8,7 @@ public class Pieces: MonoBehaviour
     public GameObject movePlate;
     private int xPos = -1;
     private int yPos = -1;
+    private bool hasMoved = false;
     private const float pieceSpacing = 0.96f;
     private const float xOffSet = -3.4f;
     private const float yOffSet = -3.5f;
@@ -103,9 +104,17 @@ public class Pieces: MonoBehaviour
                 break;
 
             case "B_Pawn":
+                if(hasMoved == false) {
+                    PawnMovePlate(xPos, yPos-2);
+                    hasMoved = true;
+                }
                 PawnMovePlate(xPos, yPos-1);
                 break;
             case "W_Pawn":
+                if(hasMoved == false) {
+                    PawnMovePlate(xPos, yPos+2);
+                    hasMoved = true;
+                }
                 PawnMovePlate(xPos, yPos+1);
                 break;
 

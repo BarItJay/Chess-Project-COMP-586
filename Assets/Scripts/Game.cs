@@ -99,10 +99,14 @@ public class Game : MonoBehaviour {
         PositionPiecesOnBoard();
     }
 
-    void Update() {
+    public void Update() {
         if (gameOver && Input.GetMouseButtonDown(0)) {
             ResetGame();
             SceneManager.LoadScene("Game");
         }
+    }
+
+    public void Winner(string winner) {
+        gameOver = true;
     }
 }

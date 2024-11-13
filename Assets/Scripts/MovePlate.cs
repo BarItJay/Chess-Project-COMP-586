@@ -19,6 +19,12 @@ public class MovePlate : MonoBehaviour
 
         if(attack) {
             GameObject piece = controller.GetComponent<Game>().GetPosition(xPos, yPos);
+            if(piece.name == "W_King") {
+                controller.GetComponent<Game>().Winner("Black");
+            }
+            if(piece.name == "B_King") {
+                controller.GetComponent<Game>().Winner("White");
+            }
             Destroy(piece);
         }
         controller.GetComponent<Game>().SetPositionEmpty(reference.GetComponent<Pieces>().GetXPos(), reference.GetComponent<Pieces>().GetYPos());
