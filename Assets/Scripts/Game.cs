@@ -73,7 +73,7 @@ public class Game : MonoBehaviour {
         Pieces p = obj.GetComponent<Pieces>();
         int x = p.GetXPos();
         int y = p.GetYPos();
-        if(x > 0 && x < 8 && y > 0 && y < 8) {
+        if(x >= 0 && x < 8 && y >= 0 && y < 8) {
             positions[x, y] = obj;
         } else {
             Debug.LogWarning($"Position out of bounds: {x}, {y}");
