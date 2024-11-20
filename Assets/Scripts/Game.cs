@@ -1,7 +1,5 @@
 using UnityEngine;
-using System.Collections;
-using System.Collections.Generic;
-using Unity.Mathematics;
+using UnityEngine.SceneManagement;
 
 public class Game : MonoBehaviour {
     public GameObject piece;
@@ -12,6 +10,11 @@ public class Game : MonoBehaviour {
     private bool gameOver = false;
 
     void Start() {
+        InitializePieces();
+        PiecesOnBoard();
+    }
+
+    private void InitializePieces() {
         playerWhite = new GameObject[] {
             Create("W_Rook", 0, 0),
             Create("W_Knight", 1, 0),
@@ -57,6 +60,16 @@ public class Game : MonoBehaviour {
         
     }
 
+    private void PiecesOnBoard() {
+        foreach(GameObject piece in playerBlack) {
+            SetPosition(piece);
+        }
+
+        foreach(GameObject piece in playerWhite) {
+            SetPosition(piece);
+        }
+    }
+
     public GameObject Create(string name, int x, int y) {
         GameObject obj = Instantiate(piece, new Vector3(0,0,-1), Quaternion.identity);
         obj.name = name;
@@ -81,21 +94,67 @@ public class Game : MonoBehaviour {
     }
 
     public void SetPositionEmpty(int x, int y) {
-        positions[x, y] = null;
+        if(PositionOnBoard(x, y)) {
+            positions[x, y] = null;
+        }
     }
 
     public GameObject GetPosition(int x, int y) {
-        return positions[x, y];
+        return PositionOnBoard(x, y) ? positions[x, y]: null;
     }
 
     public bool PositionOnBoard(int x, int y) {
-        if(x < 0 || y < 0 || x >= positions.GetLength(0) || y >= positions.GetLength(1)) {
-            return false;
-        }
-        return true;
+        return x >= 0 && x < 8 && y >= 0 && y < 8;
     }
 
+    public string GetCurrentPlayer() {
+        return currentPlayer;
+    }
 
+    public bool IsGameOver() {
+        return gameOver;
+    }
 
+    public void NextTurn() {
+        currentPlayer = (currentPlayer == "White") ? "Black" : "White";
+    }
 
+    public void Update() {
+        if(gameOver) {
+            if(Input.GetMouseButtonDown(0)) {
+                SceneManager.LoadScene("Main Menu");
+            }
+            return;
+        }
+        KingStatus();
+    }
+
+    public void KingStatus() {
+        bool whiteAlive = false;
+        bool blackAlive = false;
+
+        foreach(GameObject p in playerWhite) {
+            if(p != null && p.name == "W_King") {
+                whiteAlive = true;
+            }
+        }
+
+        foreach(GameObject p in playerBlack) {
+            if(p != null && p.name == "B_King") {
+                blackAlive = true;
+            }
+        }
+
+        if(!whiteAlive) {
+            Winner("Black");
+        } else if(!blackAlive) {
+            Winner("White");
+        }
+    }
+
+    public void Winner(string winner) {
+        gameOver = true;
+        SceneManager.LoadScene("Main Menu");
+        Debug.Log($"{winner} wins! Game Over!");
+    }
 }

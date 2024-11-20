@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 
 public class Pieces: MonoBehaviour
@@ -11,7 +12,9 @@ public class Pieces: MonoBehaviour
     private const float pieceSpacing = 0.96f;
     private const float xOffSet = -3.4f;
     private const float yOffSet = -3.5f;
-    private string player;
+    public string player;
+    public bool isFirstMove = true;
+    public int direction;
     public Sprite B_King, B_Queen, B_Knight, B_Bishop, B_Rook, B_Pawn;
     public Sprite W_King, W_Queen, W_Knight, W_Bishop, W_Rook, W_Pawn;
     private Dictionary<string, Sprite> pieceSprites;
@@ -31,6 +34,10 @@ public class Pieces: MonoBehaviour
         if(pieceSprites.ContainsKey(this.name)) {
             this.GetComponent<SpriteRenderer>().sprite = pieceSprites[this.name];
             player = this.name.StartsWith("B_") ? "Black":"White";
+
+            if(this.name.Contains("Pawn")) {
+                direction = (player == "White") ? 1:-1;
+            }
         }
     }
 
@@ -101,10 +108,8 @@ public class Pieces: MonoBehaviour
                 break;
 
             case "B_Pawn":
-                PawnMovePlate(xPos, yPos-1);
-                break;
             case "W_Pawn":
-                PawnMovePlate(xPos, yPos+1);
+                PawnMovePlate(xPos, yPos+direction);
                 break;
 
         }
@@ -157,6 +162,11 @@ public class Pieces: MonoBehaviour
         if(sc.PositionOnBoard(x,y)) {
             if(sc.GetPosition(x,y) == null) {
                 MovePlateSpawn(x,y);
+
+                if(isFirstMove && sc.PositionOnBoard(x, y+direction) && sc.GetPosition(x, y+direction) == null) {
+                    MovePlateSpawn(x, y+direction);
+                    isFirstMove = false;
+                }
             }
 
             if(sc.PositionOnBoard(x+1,y) && sc.GetPosition(x+1,y) != null && sc.GetPosition(x+1,y).GetComponent<Pieces>().player != player) {
