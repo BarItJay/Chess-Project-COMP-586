@@ -18,6 +18,7 @@ public class Pieces: MonoBehaviour
     public Sprite B_King, B_Queen, B_Knight, B_Bishop, B_Rook, B_Pawn;
     public Sprite W_King, W_Queen, W_Knight, W_Bishop, W_Rook, W_Pawn;
     private Dictionary<string, Sprite> pieceSprites;
+    private static Pieces selected;
 
     public void PieceSprites() {
         pieceSprites = new Dictionary<string, Sprite> {
@@ -64,12 +65,25 @@ public class Pieces: MonoBehaviour
     }
 
     private void OnMouseUp() {
+
         if(controller.GetComponent<Game>().GetCurrentPlayer() != player) {
             return;
         }
+
+        if(selected == this) {
+            Debug.Log($"Deselecting {this.name}");
+            DestroyMovePlates();
+            selected = null;    
+            return;
+        }
+
+        if(selected != null) {
+            selected.DestroyMovePlates();
+        }
+
+        selected = this;
         DestroyMovePlates();
         InitiateMovePlates();
-        controller.GetComponent<Game>().NextTurn();
     }
 
     public void DestroyMovePlates() {

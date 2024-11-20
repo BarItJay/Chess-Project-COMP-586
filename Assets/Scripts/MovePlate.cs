@@ -17,17 +17,26 @@ public class MovePlate : MonoBehaviour
     public void OnMouseUp() {
         controller = GameObject.FindGameObjectWithTag("GameController");
 
+        Pieces p = reference.GetComponent<Pieces>();
+
         if(attack) {
             GameObject piece = controller.GetComponent<Game>().GetPosition(xPos, yPos);
             Destroy(piece);
         }
-        controller.GetComponent<Game>().SetPositionEmpty(reference.GetComponent<Pieces>().GetXPos(), reference.GetComponent<Pieces>().GetYPos());
-        reference.GetComponent<Pieces>().SetXPos(xPos);
-        reference.GetComponent<Pieces>().SetYPos(yPos);
-        reference.GetComponent<Pieces>().SetCoords();
+
+        controller.GetComponent<Game>().SetPositionEmpty(p.GetXPos(), p.GetYPos());
+        p.SetXPos(xPos);
+        p.SetYPos(yPos);
+        p.SetCoords();
+
+        if(reference.name.EndsWith("Pawn")) {
+            p.isFirstMove = false;
+        }
 
         controller.GetComponent<Game>().SetPosition(reference);
-        reference.GetComponent<Pieces>().DestroyMovePlates();
+        p.DestroyMovePlates();
+
+        controller.GetComponent<Game>().NextTurn();
     }
 
     public void SetCoords(int x, int y) {
