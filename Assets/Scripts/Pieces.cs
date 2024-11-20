@@ -64,8 +64,12 @@ public class Pieces: MonoBehaviour
     }
 
     private void OnMouseUp() {
+        if(controller.GetComponent<Game>().GetCurrentPlayer() != player) {
+            return;
+        }
         DestroyMovePlates();
         InitiateMovePlates();
+        controller.GetComponent<Game>().NextTurn();
     }
 
     public void DestroyMovePlates() {

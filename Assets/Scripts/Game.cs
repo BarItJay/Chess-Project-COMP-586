@@ -154,7 +154,6 @@ public class Game : MonoBehaviour {
 
     public void Winner(string winner) {
         gameOver = true;
-        SceneManager.LoadScene("Main Menu");
         Debug.Log($"{winner} wins! Game Over!");
     }
 }
