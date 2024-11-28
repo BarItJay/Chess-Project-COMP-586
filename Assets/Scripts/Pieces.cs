@@ -90,10 +90,6 @@ public class Pieces: MonoBehaviour
         DestroyMovePlates();
         InitiateMovePlates();
 
-        // If the selected piece is a King and it's in check, log a message
-        if (this.name.Contains("King") && IsKingInCheck()) {
-            Debug.Log($"{player} King is in check!");
-        }
     }
 
     public void DestroyMovePlates() {
@@ -242,7 +238,6 @@ public class Pieces: MonoBehaviour
 
 
     public void MovePlateSpawn(int xPos, int yPos) {
-        Debug.Log($"MovePlateSpawn called with coordinates: ({xPos}, {yPos})");
         float x = xPos * pieceSpacing + xOffSet;
         float y = yPos * pieceSpacing + yOffSet + 0.15f;
     
@@ -254,7 +249,6 @@ public class Pieces: MonoBehaviour
     }
 
     public void MovePlateAttackSpawn(int xPos, int yPos) {
-        Debug.Log($"MovePlateAttackSpawn called with coordinates: ({xPos}, {yPos})");
         float x = xPos * pieceSpacing + xOffSet;
         float y = yPos * pieceSpacing + yOffSet + 0.15f;
     
@@ -341,8 +335,13 @@ public class Pieces: MonoBehaviour
         List<(int, int)> allMoves = GetCachedMovePositions();
 
         foreach (var move in allMoves) {
-            if (sc.PositionOnBoard(move.Item1, move.Item2) && sc.SimulateMove(gameObject, move)) {
-                validMoves.Add(move);
+            if (sc.PositionOnBoard(move.Item1, move.Item2)) {
+                GameObject targetPosition = sc.GetPosition(move.Item1, move.Item2);
+                if (targetPosition == null || targetPosition.GetComponent<Pieces>().player != player) {
+                    if (sc.SimulateMove(gameObject, move)) {
+                        validMoves.Add(move);
+                    }
+                } 
             }
         }
 

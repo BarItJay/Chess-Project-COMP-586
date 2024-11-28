@@ -58,7 +58,7 @@ public class Game : MonoBehaviour {
             SetPosition(playerBlack[i]);
             SetPosition(playerWhite[i]);
         }
-        
+
     }
 
     private void PiecesOnBoard() {
@@ -121,13 +121,15 @@ public class Game : MonoBehaviour {
     }
 
     public void Update() {
+        if(!gameOver) {
+            EndTurn();
+        }
         if(gameOver) {
-            if(Input.GetMouseButtonDown(0)) {
-                SceneManager.LoadScene("Main Menu");
-            }
+            SceneManager.LoadScene("Main Menu");
             return;
         }
         KingStatus();
+        NextTurn();
     }
 
     public void KingStatus() {
@@ -163,7 +165,6 @@ public class Game : MonoBehaviour {
         foreach (GameObject piece in pieces) {
             if (piece != null && piece.name == (player == "White" ? "W_King" : "B_King")) {
                 Pieces kingPiece = piece.GetComponent<Pieces>();
-                Debug.Log($"{player} King found at: ({kingPiece.GetXPos()}, {kingPiece.GetYPos()})");
                 return (kingPiece.GetXPos(), kingPiece.GetYPos());
             }
         }
@@ -187,21 +188,82 @@ public class Game : MonoBehaviour {
 
             foreach (var (x, y) in attackPositions) {
                 if (x == kingX && y == kingY) {
-                    return true; // King is under attack
+                    return true;
                 }
             }
         }
-        return false; // King is not under attack
+        return false;
     }
 
     public void EndTurn() {
-        NextTurn();
-        if(IsCheck(currentPlayer)) {
-            Debug.Log($"{currentPlayer} King is in check!");
+        if (IsCheckmate()) {
+            Debug.Log($"{currentPlayer} King is in checkmate!");
+            Winner(GetOpponent(currentPlayer));
+            
             KingAvoidCheck();
+        }
+        NextTurn();
+
+    }
+
+    public bool IsCheckmate() {
+        // First, find all pieces for the current player
+        GameObject[] playerPieces = currentPlayer == "White" ? playerWhite : playerBlack;
+
+        // Check if any piece can make a move that gets out of check
+        foreach (GameObject piece in playerPieces) {
+            if (piece == null) continue;
+
+            Pieces pieceComponent = piece.GetComponent<Pieces>();
+            List<(int, int)> validMoves = pieceComponent.GetValidMovePositions();
+
+            // If any piece has valid moves, it's not a checkmate
+            if (validMoves.Count > 0) {
+                return false;
+            }
+        }
+        // If no piece can move, it's a checkmate
+        return true;
+    }
+
+    public void KingAvoidCheck() {
+        var (kingX, kingY) = FindKing(currentPlayer);
+        if(kingX == -1 || kingY == -1) {
+            Debug.LogError("King not found!");
+            return;
+        }
+
+        (int, int)[] possibleMoves = {
+            (kingX - 1, kingY - 1), (kingX, kingY - 1), (kingX + 1, kingY - 1), 
+            (kingX - 1, kingY), (kingX + 1, kingY), 
+            (kingX - 1, kingY + 1), (kingX, kingY + 1), (kingX + 1, kingY + 1)
+        };
+
+        GameObject king = GetPosition(kingX, kingY);
+        if(king == null) {
+            Debug.LogError("King object not found!");
+            return;
+        }
+
+        List<(int, int)> safeMoves = new List<(int, int)>();
+        foreach(var move in possibleMoves) {
+            if(PositionOnBoard(move.Item1, move.Item2) && SimulateMove(king, move)) {
+                safeMoves.Add(move);
+            }
+        }
+
+        if(safeMoves.Count > 0) {
+            Debug.Log($"{currentPlayer} king safe moves: ");
+            foreach(var move in safeMoves) {
+                Debug.Log($"Safe move: ({move.Item1}, {move.Item2})");
+            }
+        } else {
+            Debug.Log($"{currentPlayer} king has no safe moves!");
+            Winner(GetOpponent(currentPlayer));
         }
     }
 
+    
     public bool SimulateMove(GameObject piece, (int, int) targetPosition) {
         Pieces pieceComponent = piece.GetComponent<Pieces>();
 
@@ -232,38 +294,10 @@ public class Game : MonoBehaviour {
         return resolvesCheck;
     }
 
-    public void KingAvoidCheck() {
-        var (kingX, kingY) = FindKing(currentPlayer);
-        if(kingX == -1 || kingY == -1) {
-            Debug.LogError("King not found!");
-            return;
-        }
 
-        (int, int)[] possibleMoves = {
-            (kingX - 1, kingY - 1), (kingX, kingY - 1), (kingX + 1, kingY - 1), (kingX - 1, kingY), (kingX + 1, kingY), (kingX - 1, kingY + 1), (kingX, kingY + 1), (kingX + 1, kingY + 1)
-        };
-
-        GameObject king = GetPosition(kingX, kingY);
-        if(king == null) {
-            Debug.LogError("King object not found!");
-            return;
-        }
-
-        List<(int, int)> safeMoves = new List<(int, int)>();
-        foreach(var move in possibleMoves) {
-            if(PositionOnBoard(move.Item1, move.Item2) && SimulateMove(king, move)) {
-                safeMoves.Add(move);
-            }
-        }
-
-        if(safeMoves.Count > 0) {
-            Debug.Log($"{currentPlayer} king safe moves: ");
-            foreach(var move in safeMoves) {
-                Debug.Log($"Safe move: ({move.Item1}, {move.Item2})");
-            }
-        } else {
-            Debug.Log($"{currentPlayer} king has no safe moves!");
-        }
+    public string GetOpponent(string player) {
+        return player == "White" ? "Black" : "White";
     }
+
 
 }
