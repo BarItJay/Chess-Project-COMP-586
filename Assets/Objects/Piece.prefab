@@ -103,6 +103,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   controller: {fileID: 0}
   movePlate: {fileID: 5713542925595558483, guid: 5d8a9d036d6422647a6300c4a7f5745a, type: 3}
+  player: 
+  isFirstMove: 1
+  direction: 0
   B_King: {fileID: -6276399023923689887, guid: c116f19aede5ee648b845e8f8664ef14, type: 3}
   B_Queen: {fileID: 1081252283631877077, guid: 583691b2284e90e48842833d3c2e2639, type: 3}
   B_Knight: {fileID: 6783255305048426594, guid: 270b66068ed27814cb38bdb2158a63e3, type: 3}

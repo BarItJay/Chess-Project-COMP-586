@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using System.Collections.Generic;
 
 public class Game : MonoBehaviour {
     public GameObject piece;
@@ -156,4 +157,113 @@ public class Game : MonoBehaviour {
         gameOver = true;
         Debug.Log($"{winner} wins! Game Over!");
     }
+
+    public (int, int) FindKing(string player) {
+        GameObject[] pieces = player == "White" ? playerWhite : playerBlack;
+        foreach (GameObject piece in pieces) {
+            if (piece != null && piece.name == (player == "White" ? "W_King" : "B_King")) {
+                Pieces kingPiece = piece.GetComponent<Pieces>();
+                Debug.Log($"{player} King found at: ({kingPiece.GetXPos()}, {kingPiece.GetYPos()})");
+                return (kingPiece.GetXPos(), kingPiece.GetYPos());
+            }
+        }
+        Debug.LogError($"{player} King not found!");
+        return (-1, -1); // Error case
+    }
+
+
+    public bool IsCheck(string player) {
+        var (kingX, kingY) = FindKing(player);
+        string opponent = player == "White" ? "Black" : "White";
+        GameObject[] opponentPieces = opponent == "White" ? playerWhite : playerBlack;
+
+        foreach (GameObject piece in opponentPieces) {
+            if (piece == null) continue;
+
+            Pieces pieceComponent = piece.GetComponent<Pieces>();
+
+            // Get the attack positions for the current piece
+            List<(int, int)> attackPositions = pieceComponent.GetAttackPositions();
+
+            foreach (var (x, y) in attackPositions) {
+                if (x == kingX && y == kingY) {
+                    return true; // King is under attack
+                }
+            }
+        }
+        return false; // King is not under attack
+    }
+
+    public void EndTurn() {
+        NextTurn();
+        if(IsCheck(currentPlayer)) {
+            Debug.Log($"{currentPlayer} King is in check!");
+            KingAvoidCheck();
+        }
+    }
+
+    public bool SimulateMove(GameObject piece, (int, int) targetPosition) {
+        Pieces pieceComponent = piece.GetComponent<Pieces>();
+
+        // Save current state
+        int originalX = pieceComponent.GetXPos();
+        int originalY = pieceComponent.GetYPos();
+        GameObject targetPiece = GetPosition(targetPosition.Item1, targetPosition.Item2);
+
+        // Simulate the move
+        SetPositionEmpty(originalX, originalY);
+        pieceComponent.SetXPos(targetPosition.Item1);
+        pieceComponent.SetYPos(targetPosition.Item2);
+        SetPosition(piece);
+
+        // Check if the move resolves the check
+        bool resolvesCheck = !IsCheck(pieceComponent.player);
+
+        // Revert the move
+        pieceComponent.SetXPos(originalX);
+        pieceComponent.SetYPos(originalY);
+        SetPosition(piece);
+        if (targetPiece != null) {
+            SetPosition(targetPiece);
+        } else {
+            SetPositionEmpty(targetPosition.Item1, targetPosition.Item2);
+        }
+
+        return resolvesCheck;
+    }
+
+    public void KingAvoidCheck() {
+        var (kingX, kingY) = FindKing(currentPlayer);
+        if(kingX == -1 || kingY == -1) {
+            Debug.LogError("King not found!");
+            return;
+        }
+
+        (int, int)[] possibleMoves = {
+            (kingX - 1, kingY - 1), (kingX, kingY - 1), (kingX + 1, kingY - 1), (kingX - 1, kingY), (kingX + 1, kingY), (kingX - 1, kingY + 1), (kingX, kingY + 1), (kingX + 1, kingY + 1)
+        };
+
+        GameObject king = GetPosition(kingX, kingY);
+        if(king == null) {
+            Debug.LogError("King object not found!");
+            return;
+        }
+
+        List<(int, int)> safeMoves = new List<(int, int)>();
+        foreach(var move in possibleMoves) {
+            if(PositionOnBoard(move.Item1, move.Item2) && SimulateMove(king, move)) {
+                safeMoves.Add(move);
+            }
+        }
+
+        if(safeMoves.Count > 0) {
+            Debug.Log($"{currentPlayer} king safe moves: ");
+            foreach(var move in safeMoves) {
+                Debug.Log($"Safe move: ({move.Item1}, {move.Item2})");
+            }
+        } else {
+            Debug.Log($"{currentPlayer} king has no safe moves!");
+        }
+    }
+
 }
