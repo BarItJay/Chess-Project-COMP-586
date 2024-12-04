@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using Unity.Collections;
 using UnityEngine;
 
 public class ChessBoard : MonoBehaviour {
@@ -7,6 +9,7 @@ public class ChessBoard : MonoBehaviour {
     [SerializeField] private float tileSize = 1.0f;
     [SerializeField] private float yOffset = 0.2f;
     [SerializeField] private Vector3 boardCenter = Vector3.zero;
+    [SerializeField] private float deathSize = 0.3f, deathSpacing = 0.3f, deathHeight = -0.82f, dragOffset = 1.5f;
 
     [Header("Prefabs & Material")]
     [SerializeField] private GameObject[] prefabs;
@@ -14,6 +17,9 @@ public class ChessBoard : MonoBehaviour {
 
     //Logic
     private Pieces[,] pieces;
+    private Pieces currentlyDragging;
+    private List<Pieces> deadWhites = new List<Pieces>();
+    private List<Pieces> deadBlacks = new List<Pieces>();
     private const int TILE_COUNT_X = 8, TILE_COUNT_Y = 8;
     private GameObject[,] tiles;
     private Camera currentCamera;
@@ -51,6 +57,29 @@ private void Update() {
             tiles[currentHover.x, currentHover.y].layer = LayerMask.NameToLayer("Tile");
             currentHover = hitPosition;
             tiles[hitPosition.x, hitPosition.y].layer = LayerMask.NameToLayer("Hover");
+
+        } 
+        // press down on mouse button
+        if(Input.GetMouseButtonDown(0)) {
+            if(pieces[hitPosition.x, hitPosition.y]) {
+                //Check player turn
+                if(true) {
+                    currentlyDragging = pieces[hitPosition.x, hitPosition.y];
+                }
+            }
+        } 
+ 
+        // release mouse button
+        if(Input.GetMouseButtonUp(0)) {
+            Vector2Int previousPos = new Vector2Int(currentlyDragging.currentX, currentlyDragging.currentY);
+
+            bool validMove = MoveToPos(currentlyDragging, hitPosition.x, hitPosition.y);
+            if(!validMove) {
+                currentlyDragging.SetPos(GetTileCenter(previousPos.x, previousPos.y));
+                currentlyDragging = null;
+            } else {
+                currentlyDragging = null;
+            }
         }
     } else {
         // If not hovering over any tile
@@ -58,9 +87,22 @@ private void Update() {
             tiles[currentHover.x, currentHover.y].layer = LayerMask.NameToLayer("Tile");
             currentHover = -Vector2Int.one;
         }
-    }
-}
 
+        if(currentlyDragging && Input.GetMouseButtonUp(0)) {
+            currentlyDragging.SetPos(GetTileCenter(currentlyDragging.currentX, currentlyDragging.currentY));
+        }
+    }
+
+    //if dragging piece
+    if(currentlyDragging) {
+        Plane horPlane = new Plane(Vector3.up, Vector3.up * yOffset);
+        float distance = 0.0f;
+        if(horPlane.Raycast(ray, out distance)) {
+            currentlyDragging.SetPos(ray.GetPoint(distance) + Vector3.up * dragOffset);
+        }
+    }
+
+}
 
     //Generate the board
     private void GenerateAllTiles(float tileSize, int tileCountX, int tileCountY) {
@@ -157,7 +199,7 @@ private void Update() {
     private void PositionSinglePiece(int x, int y, bool force = false) {
         pieces[x, y].currentX = x;
         pieces[x, y].currentY = y;
-        pieces[x, y].transform.position = GetTileCenter(x, y);
+        pieces[x, y].SetPos(GetTileCenter(x, y), force);//remove force for unintended animation
     }
 
     private Vector3 GetTileCenter(int x, int y) {
@@ -165,6 +207,35 @@ private void Update() {
     }
 
     //Operations
+    private bool MoveToPos(Pieces p, int x, int y) {
+        Vector2Int previousPos = new Vector2Int(p.currentX, p.currentY);
+
+        //There is another piece on target position
+        if(pieces[x, y] != null) {
+            Pieces otherPiece = pieces[x, y];
+            if(p.team == otherPiece.team) {
+                return false;
+            }
+
+            //If its enemy team
+            if(otherPiece.team == 0) {
+                deadWhites.Add(otherPiece);
+                otherPiece.SetScale(Vector3.one * deathSize);
+                otherPiece.SetPos(new Vector3(8 * tileSize, deathHeight, -1 * tileSize) - bounds + new Vector3(tileSize/2, 0, tileSize/2) + (Vector3.forward * deathSpacing) * deadWhites.Count);
+            } else {
+                deadBlacks.Add(otherPiece);
+                otherPiece.SetScale(Vector3.one * deathSize);
+                otherPiece.SetPos(new Vector3(-1 * tileSize, deathHeight, 8 * tileSize) - bounds + new Vector3(tileSize/2, 0, tileSize/2) + (Vector3.back * deathSpacing) * deadBlacks.Count);
+            }
+        }
+
+        pieces[x, y] = p;
+        pieces[previousPos.x, previousPos.y] = null;
+
+        PositionSinglePiece(x, y);
+
+        return true;
+    }
     private Vector2Int LookupTileIndex(GameObject hitInfo) {
         for(int x = 0; x < TILE_COUNT_X; x++) {
             for(int y = 0; y < TILE_COUNT_Y; y++) {
