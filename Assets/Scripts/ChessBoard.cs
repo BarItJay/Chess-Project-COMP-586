@@ -18,6 +18,7 @@ public class ChessBoard : MonoBehaviour {
     //Logic
     private Pieces[,] pieces;
     private Pieces currentlyDragging;
+    private List<Vector2Int> availableMoves = new List<Vector2Int>();
     private List<Pieces> deadWhites = new List<Pieces>();
     private List<Pieces> deadBlacks = new List<Pieces>();
     private const int TILE_COUNT_X = 8, TILE_COUNT_Y = 8;
@@ -41,7 +42,7 @@ private void Update() {
     RaycastHit info;
     // Raycast against both "Tile" and "Hover" layers
     Ray ray = currentCamera.ScreenPointToRay(Input.mousePosition);
-    int layerMask = LayerMask.GetMask("Tile", "Hover");
+    int layerMask = LayerMask.GetMask("Tile", "Hover", "Highlight", "Capture");
 
     if (Physics.Raycast(ray, out info, 100, layerMask)) {
         // Get index of the tile hit
@@ -54,7 +55,7 @@ private void Update() {
         }
         // If hovering over a different tile
         else if (currentHover != hitPosition) {
-            tiles[currentHover.x, currentHover.y].layer = LayerMask.NameToLayer("Tile");
+            tiles[currentHover.x, currentHover.y].layer = (ContainsValidMove(ref availableMoves, currentHover)) ? LayerMask.NameToLayer("Highlight") : LayerMask.NameToLayer("Tile");
             currentHover = hitPosition;
             tiles[hitPosition.x, hitPosition.y].layer = LayerMask.NameToLayer("Hover");
 
@@ -65,31 +66,37 @@ private void Update() {
                 //Check player turn
                 if(true) {
                     currentlyDragging = pieces[hitPosition.x, hitPosition.y];
+                    
+                    //Get list of where piece can move with highlight
+                    availableMoves = currentlyDragging.GetAvailableMoves(ref pieces, TILE_COUNT_X, TILE_COUNT_Y);
+                    HighlightTiles();
+
                 }
             }
         } 
  
         // release mouse button
-        if(Input.GetMouseButtonUp(0)) {
+        if(currentlyDragging != null && Input.GetMouseButtonUp(0)) {
             Vector2Int previousPos = new Vector2Int(currentlyDragging.currentX, currentlyDragging.currentY);
 
             bool validMove = MoveToPos(currentlyDragging, hitPosition.x, hitPosition.y);
             if(!validMove) {
                 currentlyDragging.SetPos(GetTileCenter(previousPos.x, previousPos.y));
-                currentlyDragging = null;
-            } else {
-                currentlyDragging = null;
-            }
+            } 
+            currentlyDragging = null;
+            RemoveHighlight();
         }
     } else {
         // If not hovering over any tile
         if (currentHover != -Vector2Int.one) {
-            tiles[currentHover.x, currentHover.y].layer = LayerMask.NameToLayer("Tile");
+            tiles[currentHover.x, currentHover.y].layer = (ContainsValidMove(ref availableMoves, currentHover)) ? LayerMask.NameToLayer("Highlight") : LayerMask.NameToLayer("Tile");
             currentHover = -Vector2Int.one;
         }
 
         if(currentlyDragging && Input.GetMouseButtonUp(0)) {
             currentlyDragging.SetPos(GetTileCenter(currentlyDragging.currentX, currentlyDragging.currentY));
+            currentlyDragging = null;
+            RemoveHighlight();
         }
     }
 
@@ -206,8 +213,35 @@ private void Update() {
         return new Vector3(x * tileSize, yOffset, y * tileSize) - bounds + new Vector3(tileSize/2, 0, tileSize/2);
     }
 
+    //Highlight Tiles
+    private void HighlightTiles() {
+        for(int i = 0; i < availableMoves.Count; i++) {
+            tiles[availableMoves[i].x, availableMoves[i].y].layer = LayerMask.NameToLayer("Highlight");
+        }
+    }
+
+    private void RemoveHighlight() {
+        for(int i = 0; i < availableMoves.Count; i++) {
+            tiles[availableMoves[i].x, availableMoves[i].y].layer = LayerMask.NameToLayer("Tile");
+        }
+
+        availableMoves.Clear();
+    }
+
     //Operations
+    private bool ContainsValidMove(ref List<Vector2Int> moves, Vector2 pos) {
+        for(int i = 0; i < moves.Count; i++) {
+            if(moves[i].x == pos.x && moves[i].y == pos.y) {
+                return true;
+            }
+        }
+
+        return false;
+    }
     private bool MoveToPos(Pieces p, int x, int y) {
+        if(!ContainsValidMove(ref availableMoves, new Vector2(x,y))) {
+            return false;
+        }
         Vector2Int previousPos = new Vector2Int(p.currentX, p.currentY);
 
         //There is another piece on target position
