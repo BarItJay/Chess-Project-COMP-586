@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using Unity.Collections;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.SceneManagement;
 
 public class ChessBoard : MonoBehaviour {
     [Header("Art Stuff")]
@@ -10,6 +12,7 @@ public class ChessBoard : MonoBehaviour {
     [SerializeField] private float yOffset = 0.2f;
     [SerializeField] private Vector3 boardCenter = Vector3.zero;
     [SerializeField] private float deathSize = 0.3f, deathSpacing = 0.3f, deathHeight = -0.82f, dragOffset = 1.5f;
+    [SerializeField] private GameObject winnerScreen;
 
     [Header("Prefabs & Material")]
     [SerializeField] private GameObject[] prefabs;
@@ -26,8 +29,10 @@ public class ChessBoard : MonoBehaviour {
     private Camera currentCamera;
     private Vector2Int currentHover;
     private Vector3 bounds;
+    private bool isWhite;
 
     private void Awake() {
+        isWhite = true;
         GenerateAllTiles(tileSize, TILE_COUNT_X, TILE_COUNT_Y);
         GenerateAllPieces();
         PositionAllPieces();
@@ -64,7 +69,7 @@ private void Update() {
         if(Input.GetMouseButtonDown(0)) {
             if(pieces[hitPosition.x, hitPosition.y]) {
                 //Check player turn
-                if(true) {
+                if((pieces[hitPosition.x, hitPosition.y].team == 0 && isWhite) || (pieces[hitPosition.x, hitPosition.y].team == 1 && !isWhite)) {
                     currentlyDragging = pieces[hitPosition.x, hitPosition.y];
                     
                     //Get list of where piece can move with highlight
@@ -228,6 +233,55 @@ private void Update() {
         availableMoves.Clear();
     }
 
+    //CheckMate
+    private void CheckMate(int team) {
+        DisplayWinner(team);
+    }
+
+    private void DisplayWinner(int winner) {
+        winnerScreen.SetActive(true);
+        winnerScreen.transform.GetChild(winner).gameObject.SetActive(true);
+    }
+
+    public void OnResetButton() {
+        //UI
+        winnerScreen.transform.GetChild(0).gameObject.SetActive(false);
+        winnerScreen.transform.GetChild(1).gameObject.SetActive(false);
+        winnerScreen.SetActive(false);
+
+        //Reset fields
+        currentlyDragging = null;
+        availableMoves = new List<Vector2Int>();
+
+        //Clean up
+        for(int x = 0; x < TILE_COUNT_X; x++) {
+            for(int y = 0; y < TILE_COUNT_Y; y++) {
+                if(pieces[x, y] != null) {
+                    Destroy(pieces[x, y].gameObject);
+                }
+                pieces[x, y] = null;
+            }
+        }
+
+        for(int i = 0; i < deadWhites.Count; i++) {
+            Destroy(deadWhites[i].gameObject);
+        }
+        for(int i = 0; i < deadBlacks.Count; i++) {
+            Destroy(deadBlacks[i].gameObject);
+        }
+
+        deadWhites.Clear();
+        deadBlacks.Clear();
+
+        GenerateAllPieces();
+        PositionAllPieces();
+        isWhite = true;
+    }
+
+    public void OnMenuExitButton() {
+        SceneManager.LoadScene("MainMenu");
+    }
+
     //Operations
     private bool ContainsValidMove(ref List<Vector2Int> moves, Vector2 pos) {
         for(int i = 0; i < moves.Count; i++) {
@@ -253,10 +307,16 @@ private void Update() {
 
             //If its enemy team
             if(otherPiece.team == 0) {
+                if(otherPiece.type == PieceType.King) {
+                    CheckMate(1);
+                }
                 deadWhites.Add(otherPiece);
                 otherPiece.SetScale(Vector3.one * deathSize);
                 otherPiece.SetPos(new Vector3(8 * tileSize, deathHeight, -1 * tileSize) - bounds + new Vector3(tileSize/2, 0, tileSize/2) + (Vector3.forward * deathSpacing) * deadWhites.Count);
             } else {
+                if(otherPiece.type == PieceType.King) {
+                    CheckMate(0);
+                }
                 deadBlacks.Add(otherPiece);
                 otherPiece.SetScale(Vector3.one * deathSize);
                 otherPiece.SetPos(new Vector3(-1 * tileSize, deathHeight, 8 * tileSize) - bounds + new Vector3(tileSize/2, 0, tileSize/2) + (Vector3.back * deathSpacing) * deadBlacks.Count);
@@ -267,6 +327,8 @@ private void Update() {
         pieces[previousPos.x, previousPos.y] = null;
 
         PositionSinglePiece(x, y);
+
+        isWhite = !isWhite;
 
         return true;
     }
