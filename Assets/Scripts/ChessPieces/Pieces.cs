@@ -45,6 +45,10 @@ public class Pieces : MonoBehaviour {
         }
     }
 
+    public virtual SpecialMove GetSpecialMoves(ref Pieces[,] board, ref List<Vector2Int[]> moveList, ref List<Vector2Int> availableMoves) {
+        return SpecialMove.None;
+    }
+
     public virtual void SetScale(Vector3 scale, bool force = false) {
         desiredScale = scale;
         if(force) {

@@ -5,6 +5,13 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
+public enum SpecialMove {
+    None,
+    EnPassant,
+    Castling,
+    Promotion
+}
+
 public class ChessBoard : MonoBehaviour {
     [Header("Art Stuff")]
     [SerializeField] private Material tileMaterial;
@@ -30,6 +37,9 @@ public class ChessBoard : MonoBehaviour {
     private Vector2Int currentHover;
     private Vector3 bounds;
     private bool isWhite;
+    private SpecialMove specialMove;
+    private List<Vector2Int[]> moveList = new List<Vector2Int[]>();
+
 
     private void Awake() {
         isWhite = true;
@@ -65,7 +75,7 @@ private void Update() {
             tiles[hitPosition.x, hitPosition.y].layer = LayerMask.NameToLayer("Hover");
 
         } 
-        // press down on mouse button
+        // press mouse button
         if(Input.GetMouseButtonDown(0)) {
             if(pieces[hitPosition.x, hitPosition.y]) {
                 //Check player turn
@@ -74,8 +84,10 @@ private void Update() {
                     
                     //Get list of where piece can move with highlight
                     availableMoves = currentlyDragging.GetAvailableMoves(ref pieces, TILE_COUNT_X, TILE_COUNT_Y);
-                    HighlightTiles();
+                    //Get list of special moves
+                    specialMove = currentlyDragging.GetSpecialMoves(ref pieces, ref moveList, ref availableMoves);
 
+                    HighlightTiles();
                 }
             }
         } 
@@ -251,7 +263,8 @@ private void Update() {
 
         //Reset fields
         currentlyDragging = null;
-        availableMoves = new List<Vector2Int>();
+        availableMoves.Clear();
+        moveList.Clear();
 
         //Clean up
         for(int x = 0; x < TILE_COUNT_X; x++) {
@@ -282,8 +295,34 @@ private void Update() {
         SceneManager.LoadScene("MainMenu");
     }
 
+    //Special Moves
+    private void ProcessSpecialMove() {
+        if(specialMove == SpecialMove.EnPassant) {
+            var newMove = moveList[moveList.Count - 1];
+            Pieces myPawn = pieces[newMove[1].x, newMove[1].y];
+            var targetPawnPos = moveList[moveList.Count - 2];
+            Pieces enemyPawn = pieces[targetPawnPos[1].x, targetPawnPos[1].y];
+
+            if(myPawn.currentX == enemyPawn.currentX) {
+                if(myPawn.currentY == enemyPawn.currentY - 1 || myPawn.currentY == enemyPawn.currentY + 1) {
+                    if(enemyPawn.team == 0) {
+                        deadWhites.Add(enemyPawn);
+                        enemyPawn.SetScale(Vector3.one * deathSize);
+                        enemyPawn.SetPos(new Vector3(8 * tileSize, deathHeight, -1 * tileSize) - bounds + new Vector3(tileSize/2, 0, tileSize/2) + (Vector3.forward * deathSpacing) * deadWhites.Count);
+                    }
+                    else {
+                        deadBlacks.Add(enemyPawn);
+                        enemyPawn.SetScale(Vector3.one * deathSize);
+                        enemyPawn.SetPos(new Vector3(8 * tileSize, deathHeight, -1 * tileSize) - bounds + new Vector3(tileSize/2, 0, tileSize/2) + (Vector3.forward * deathSpacing) * deadBlacks.Count);
+                    }
+                    pieces[enemyPawn.currentX, enemyPawn.currentY] = null;
+                }
+            }
+        }
+    }
+
     //Operations
-    private bool ContainsValidMove(ref List<Vector2Int> moves, Vector2 pos) {
+    private bool ContainsValidMove(ref List<Vector2Int> moves, Vector2Int pos) {
         for(int i = 0; i < moves.Count; i++) {
             if(moves[i].x == pos.x && moves[i].y == pos.y) {
                 return true;
@@ -293,7 +332,7 @@ private void Update() {
         return false;
     }
     private bool MoveToPos(Pieces p, int x, int y) {
-        if(!ContainsValidMove(ref availableMoves, new Vector2(x,y))) {
+        if(!ContainsValidMove(ref availableMoves, new Vector2Int(x,y))) {
             return false;
         }
         Vector2Int previousPos = new Vector2Int(p.currentX, p.currentY);
@@ -329,6 +368,9 @@ private void Update() {
         PositionSinglePiece(x, y);
 
         isWhite = !isWhite;
+        moveList.Add(new Vector2Int[] { previousPos, new Vector2Int(x, y)});
+
+        ProcessSpecialMove();
 
         return true;
     }
