@@ -43,6 +43,11 @@ public class Pawn : Pieces {
     {
         int dir = (team == 0) ? 1 : -1;
 
+        //Promotion
+        if((team == 0 && currentY == 6) || (team == 1 && currentY == 1)) {
+            return SpecialMove.Promotion;
+        }
+
         //En Passant
         if(moveList.Count > 0) {
             Vector2Int[] lastMove = moveList[moveList.Count - 1];
@@ -63,7 +68,7 @@ public class Pawn : Pieces {
                 }
             }
         }
-
+               
         return SpecialMove.None;
     }
 

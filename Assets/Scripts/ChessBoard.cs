@@ -20,6 +20,7 @@ public class ChessBoard : MonoBehaviour {
     [SerializeField] private Vector3 boardCenter = Vector3.zero;
     [SerializeField] private float deathSize = 0.3f, deathSpacing = 0.3f, deathHeight = -0.82f, dragOffset = 1.5f;
     [SerializeField] private GameObject winnerScreen;
+    [SerializeField] private GameObject promotionScreen;
 
     [Header("Prefabs & Material")]
     [SerializeField] private GameObject[] prefabs;
@@ -48,7 +49,7 @@ public class ChessBoard : MonoBehaviour {
         PositionAllPieces();
     }
 
-private void Update() {
+    private void Update() {
     if (!currentCamera) {
         currentCamera = Camera.main;
         return;
@@ -251,8 +252,13 @@ private void Update() {
     }
 
     private void DisplayWinner(int winner) {
+        for(int i = 0; i < winnerScreen.transform.childCount; i++) {
+            winnerScreen.transform.GetChild(i).gameObject.SetActive(false);
+        }
         winnerScreen.SetActive(true);
         winnerScreen.transform.GetChild(winner).gameObject.SetActive(true);
+        winnerScreen.transform.GetChild(2).gameObject.SetActive(true);
+        winnerScreen.transform.GetChild(3).gameObject.SetActive(true);
     }
 
     public void OnResetButton() {
@@ -297,6 +303,17 @@ private void Update() {
 
     //Special Moves
     private void ProcessSpecialMove() {
+        if(specialMove == SpecialMove.Promotion) {
+            Vector2Int[] lastMove = moveList[moveList.Count - 1];
+            Pieces targetPawn = pieces[lastMove[1].x, lastMove[1].y];
+
+            if(targetPawn.type == PieceType.Pawn) {
+                if((targetPawn.team == 0 && lastMove[1].y == 7) || (targetPawn.team == 1 && lastMove[1].y == 0)) {
+                    DisplayPromotion(targetPawn.team);
+                }
+            }
+        }
+
         if(specialMove == SpecialMove.EnPassant) {
             var newMove = moveList[moveList.Count - 1];
             Pieces myPawn = pieces[newMove[1].x, newMove[1].y];
@@ -319,7 +336,7 @@ private void Update() {
                 }
             }
         }
-        
+
         if(specialMove == SpecialMove.Castling) {
             Vector2Int[] lastMove = moveList[moveList.Count - 1];
 
@@ -354,6 +371,46 @@ private void Update() {
         }
     }
 
+    //Promotions
+    private void DisplayPromotion(int team) {
+        promotionScreen.SetActive(true);        
+        winnerScreen.transform.GetChild(team).gameObject.SetActive(true);
+    }
+
+    public void PromoteQueen() {
+        PromotePawn(PieceType.Queen);
+    }
+
+    public void PromoteKnight() {
+        PromotePawn(PieceType.Knight);
+    }
+
+    public void PromoteBishop() {
+        PromotePawn(PieceType.Bishop);
+    }
+
+    public void PromoteRook() {
+        PromotePawn(PieceType.Rook);
+    }
+
+    private void PromotePawn(PieceType newType) {
+        Vector2Int[] lastMove = moveList[moveList.Count - 1];
+        Pieces targetPawn = pieces[lastMove[1].x, lastMove[1].y];
+        Pieces newPiece = GenerateSinglePiece(newType, targetPawn.team);
+        newPiece.transform.position = targetPawn.transform.position;
+
+        Destroy(pieces[lastMove[1].x, lastMove[1].y].gameObject);
+        pieces[lastMove[1].x, lastMove[1].y] = newPiece;
+
+        PositionSinglePiece(lastMove[1].x, lastMove[1].y);
+
+        
+        promotionScreen.SetActive(false);
+
+        specialMove = SpecialMove.None;
+
+    }
+    
     //Operations
     private bool ContainsValidMove(ref List<Vector2Int> moves, Vector2Int pos) {
         for(int i = 0; i < moves.Count; i++) {
