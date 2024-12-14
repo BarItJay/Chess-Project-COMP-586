@@ -319,6 +319,39 @@ private void Update() {
                 }
             }
         }
+        
+        if(specialMove == SpecialMove.Castling) {
+            Vector2Int[] lastMove = moveList[moveList.Count - 1];
+
+            //Left Rook
+            if(lastMove[1].x == 2) {
+                 if(lastMove[1].y == 0) {//White
+                    Pieces rook = pieces[0, 0];
+                    pieces[3, 0] = rook;
+                    PositionSinglePiece(3, 0);
+                    pieces[0, 0] = null;
+                 } else if(lastMove[1].y == 7) {//Black
+                    Pieces rook = pieces[0, 7];
+                    pieces[3, 7] = rook;
+                    PositionSinglePiece(3, 7);
+                    pieces[0, 7] = null;
+                 }
+            }//Right Rook
+            else if(lastMove[1].x == 6) {
+                 if(lastMove[1].y == 0) {//White
+                    Pieces rook = pieces[7, 0];
+                    pieces[5, 0] = rook;
+                    PositionSinglePiece(5, 0);
+                    pieces[7, 0] = null;
+                 } else if(lastMove[1].y == 7) {//Black
+                    Pieces rook = pieces[7, 7];
+                    pieces[5, 7] = rook;
+                    PositionSinglePiece(5, 7);
+                    pieces[7, 7] = null;
+                 }
+            }
+
+        }
     }
 
     //Operations
