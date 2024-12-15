@@ -28,6 +28,7 @@ public class ChessBoard : MonoBehaviour {
     [Header("Prefabs & Material")]
     [SerializeField] private GameObject[] prefabs;
     [SerializeField] private Material[] teamMaterials;
+    [SerializeField] private Animator menuAnimator;
 
     //Logic
     private Pieces[,] pieces;
@@ -302,9 +303,13 @@ public class ChessBoard : MonoBehaviour {
     }
 
     public void OnMenuExitButton() {
-        SceneManager.LoadScene("MainMenu");
+        menuAnimator.SetTrigger("StartMenu");
+        OnResetButton();
     }
 
+    public void OnReturnToStartButton() {
+        SceneManager.LoadScene("MainMenu");
+    }
     //Special Moves
     private void ProcessSpecialMove() {
         if(specialMove == SpecialMove.Promotion) {

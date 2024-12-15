@@ -1,9 +1,14 @@
+using TMPro;
 using UnityEngine;
 
 public class GameUI : MonoBehaviour {
     public static GameUI Instance {set; get;}
 
+    public Server server;
+    public Client client;
+
     [SerializeField] private Animator menuAnimator;
+    [SerializeField] private TMP_InputField addressInput;
     
     private void Awake() {
         Instance = this;
@@ -12,6 +17,8 @@ public class GameUI : MonoBehaviour {
     //Buttons
     public void OnLocalGameButton() {
         menuAnimator.SetTrigger("NoMenu");
+        server.Init(8007);
+        client.Init("127.0.0.1", 8007);
     }
 
     public void OnOnlineGameButton() {
@@ -19,11 +26,13 @@ public class GameUI : MonoBehaviour {
     }
 
     public void OnOnlineHostButton() {
+        server.Init(8007);
+        client.Init("127.0.0.1", 8007);
         menuAnimator.SetTrigger("HostMenu");
     }
 
     public void OnOnlineConnectButton() {
-        Debug.Log("OnOnlineConnectButton");
+        client.Init(addressInput.text, 8007);
     }
 
     public void OnOnlineBackButton() {
@@ -31,6 +40,8 @@ public class GameUI : MonoBehaviour {
     }
 
     public void OnHostBackButton() {
+        server.Shutdown();
+        client.Shutdown();
         menuAnimator.SetTrigger("OnlineMenu");
     }
 }
