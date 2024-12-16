@@ -1,6 +1,12 @@
 using TMPro;
 using UnityEngine;
 
+public enum CameraAngle {
+    menu,
+    whiteTeam,
+    blackTeam
+}
+
 public class GameUI : MonoBehaviour {
     public static GameUI Instance {set; get;}
 
@@ -9,9 +15,19 @@ public class GameUI : MonoBehaviour {
 
     [SerializeField] private Animator menuAnimator;
     [SerializeField] private TMP_InputField addressInput;
+    [SerializeField] private GameObject[] cameraAngles;
+
     
     private void Awake() {
         Instance = this;
+    }
+
+    //Cameras
+    public void ChangeCamera(CameraAngle index) {
+        for(int i = 0; i < cameraAngles.Length; i++) {
+            cameraAngles[i].SetActive(false);
+        }
+        cameraAngles[(int)index].SetActive(true);
     }
 
     //Buttons
@@ -32,7 +48,11 @@ public class GameUI : MonoBehaviour {
     }
 
     public void OnOnlineConnectButton() {
-        client.Init(addressInput.text, 8007);
+        if (server != null && server.isActive) {
+            client.Init(addressInput.text, 8007);
+        } else {
+            Debug.LogError("Server is not active. Please start the server first.");
+        }
     }
 
     public void OnOnlineBackButton() {
@@ -43,5 +63,11 @@ public class GameUI : MonoBehaviour {
         server.Shutdown();
         client.Shutdown();
         menuAnimator.SetTrigger("OnlineMenu");
+    }
+
+    private void InitializeServerClient(string ip, ushort port) {
+        Debug.Log($"Initializing server and client on IP: {ip}, Port: {port}");
+        server.Init(port);
+        client.Init(ip, port);
     }
 }

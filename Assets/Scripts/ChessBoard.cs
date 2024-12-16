@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Security.Cryptography;
 using NUnit.Framework;
 using Unity.Collections;
+using Unity.Networking.Transport;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
@@ -44,6 +45,8 @@ public class ChessBoard : MonoBehaviour {
     private bool isWhite;
     private SpecialMove specialMove;
     private List<Vector2Int[]> moveList = new List<Vector2Int[]>();
+    //Multiplayer Logic
+    private int playerCount = -1, currentTeam = -1;
 
 
     private void Awake() {
@@ -51,6 +54,8 @@ public class ChessBoard : MonoBehaviour {
         GenerateAllTiles(tileSize, TILE_COUNT_X, TILE_COUNT_Y);
         GenerateAllPieces();
         PositionAllPieces();
+
+        RegisterEvents();
     }
 
     private void Update() {
@@ -621,4 +626,49 @@ public class ChessBoard : MonoBehaviour {
 
         return -Vector2Int.one;//Invalid
     }
+
+    #region
+    private void RegisterEvents() {
+        NetUtility.S_WELCOME += OnWelcomeServer;
+
+        NetUtility.C_WELCOME += OnWelcomeClient;
+        NetUtility.C_START_GAME += OnStartGameClient;
+    }
+
+    private void UnRegisterEvents() {
+
+    }
+
+    //Server
+    private void OnWelcomeServer(NetMessage msg, NetworkConnection cnn) {
+        //Client connected, assign team
+        NetWelcome nw = msg as NetWelcome;
+
+        //Assign a tem
+        nw.AssignedTeam = ++playerCount;
+
+        //Return to client
+        Server.Instance.SendToClient(cnn, nw);
+
+        //If full start game
+        if(playerCount == 1) {
+            Server.Instance.BroadCast(new NetStartGame());
+        }
+    }
+
+    //Client
+    private void OnWelcomeClient(NetMessage msg) {
+        //Receive connection message
+        NetWelcome nw = msg as NetWelcome;
+
+        //Assign the team
+        currentTeam = nw.AssignedTeam;
+
+        Debug.Log($"My assigned team is {nw.AssignedTeam}");
+    }
+
+    private void OnStartGameClient(NetMessage msg) {
+        GameUI.Instance.ChangeCamera((currentTeam == 0) ? CameraAngle.whiteTeam : CameraAngle.blackTeam);
+    }
+    #endregion
 }

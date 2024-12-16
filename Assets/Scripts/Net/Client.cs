@@ -18,12 +18,18 @@ public class Client : MonoBehaviour {
     //Methods
     public void Init(string ip, ushort port) {
         driver = NetworkDriver.Create();
+
+        if(string.IsNullOrEmpty(ip) || port <= 0) {
+            Debug.Log("Invalid IP or port");
+            return;
+        }
+
         NetworkEndpoint endpoint = NetworkEndpoint.Parse(ip, port);
         endpoint.Port = port;
 
         connection = driver.Connect(endpoint);
 
-        Debug.Log($"Attempting to connect to Server on {endpoint.Address}");
+        Debug.Log($"Attempting to connect to Server on {endpoint.Address}:{endpoint.Port}");
 
         isActive = true;
 
@@ -67,7 +73,7 @@ public class Client : MonoBehaviour {
         NetworkEvent.Type cmd;
         while((cmd = connection.PopEvent(driver, out stream)) != NetworkEvent.Type.Empty) {
             if (cmd == NetworkEvent.Type.Connect) {
-                //SendToServer(new NetWelcome());
+                SendToServer(new NetWelcome());
                 Debug.Log("Connected!");
             } else if(cmd == NetworkEvent.Type.Data) {
                 NetUtility.OnData(stream, default(NetworkConnection));

@@ -6,7 +6,7 @@ using Unity.Collections;
 public enum OpCode {
     KEEP_ALIVE = 1,
     WELCOME,
-    START_OVER,
+    START_GAME,
     MAKE_MOVE,
     REMATCH
 }
@@ -17,16 +17,16 @@ public static class NetUtility {
         NetMessage msg = null;
         var opCode = (OpCode)stream.ReadByte();
         switch (opCode) {
-            /*case OpCode.KEEP_ALIVE:
+            case OpCode.KEEP_ALIVE:
             msg = new NetKeepAlive(stream);
             break;
             case OpCode.WELCOME:
             msg = new NetWelcome(stream);
             break;
-            case OpCode.START_OVER:
+            case OpCode.START_GAME:
             msg = new NetStartGame(stream);
             break;
-            case OpCode.MAKE_MOVE:
+            /*case OpCode.MAKE_MOVE:
             msg = new NetMakeMove(stream);
             break;
             case OpCode.REMATCH:

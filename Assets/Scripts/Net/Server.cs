@@ -14,7 +14,7 @@ public class Server : MonoBehaviour {
 
     public NetworkDriver driver;
     private NativeList<NetworkConnection> connections;
-    private bool isActive = false;
+    public bool isActive { get; private set; } = false;
     private const float keepAliveTickRate = 20.0f;
     private float lastKeepAlive;
     public Action connectionDropped;
@@ -106,6 +106,10 @@ public class Server : MonoBehaviour {
 
     //Server Specific
     public void SendToClient(NetworkConnection connection, NetMessage msg) {
+        if(!connection.IsCreated) {
+            Debug.LogError($"Attempted to send message to connection");
+            return;
+        }
         DataStreamWriter writer;
         driver.BeginSend(connection, out writer);
         msg.Serialize(ref writer);
