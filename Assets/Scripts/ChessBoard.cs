@@ -55,8 +55,16 @@ public class ChessBoard : MonoBehaviour {
     private bool localGame = true;
     private bool[] playerRematch = new bool[2];
 
+    #region Singleton Implementation
+    public static ChessBoard Instance {get; set; }
+    private void Awake() {
+        Instance = this; 
+    }
+    #endregion
+
 
     private void Start() {
+        Client.Instance.SetChessboard(this);
         isWhite = true;
         GenerateAllTiles(tileSize, TILE_COUNT_X, TILE_COUNT_Y);
         GenerateAllPieces();
@@ -577,8 +585,10 @@ public class ChessBoard : MonoBehaviour {
 
     //Promotions
     private void DisplayPromotion(int team) {
-        promotionScreen.SetActive(true);        
-        winnerScreen.transform.GetChild(team).gameObject.SetActive(true);
+        if(team == currentTeam) {
+            promotionScreen.SetActive(true);        
+            winnerScreen.transform.GetChild(team).gameObject.SetActive(true);
+        }
     }
 
     public void PromoteQueen() {
@@ -597,9 +607,22 @@ public class ChessBoard : MonoBehaviour {
         PromotePawn(PieceType.Rook);
     }
 
-    private void PromotePawn(PieceType newType) {
+    public void PromotePawn(PieceType newType) {
+        // Ensure we have a valid last move to promote
+        if (moveList.Count == 0) {
+            Debug.LogWarning("No move to promote from");
+            return;
+        }
+
         Vector2Int[] lastMove = moveList[moveList.Count - 1];
         Pieces targetPawn = pieces[lastMove[1].x, lastMove[1].y];
+
+        // Additional safety check
+        if (targetPawn == null || targetPawn.type != PieceType.Pawn) {
+            Debug.LogWarning("Invalid promotion target");
+            return;
+        }
+
         Pieces newPiece = GenerateSinglePiece(newType, targetPawn.team);
         newPiece.transform.position = targetPawn.transform.position;
 
@@ -608,13 +631,47 @@ public class ChessBoard : MonoBehaviour {
 
         PositionSinglePiece(lastMove[1].x, lastMove[1].y);
 
-        
+        // Reset promotion-related states explicitly
         promotionScreen.SetActive(false);
-
         specialMove = SpecialMove.None;
 
+        // Network promotion
+        if (!localGame) {
+            NetPromotion np = new NetPromotion {
+                teamId = targetPawn.team,
+                x = lastMove[1].x,
+                y = lastMove[1].y,
+                newType = newType,
+            };
+            Client.Instance.SendToServer(np);
+        }
     }
-    
+
+    public void PromotePawnAt(int x, int y, PieceType newType, int team) {
+        // Validate the promotion target more strictly
+        if (x < 0 || x >= TILE_COUNT_X || y < 0 || y >= TILE_COUNT_Y) {
+            Debug.LogWarning("Invalid promotion coordinates");
+            return;
+        }
+
+        Pieces targetPawn = pieces[x, y];
+        if (targetPawn == null || targetPawn.type != PieceType.Pawn || targetPawn.team != team) {
+            Debug.LogWarning("Invalid pawn for promotion");
+            return;
+        }
+
+        Pieces newPiece = GenerateSinglePiece(newType, team);
+        newPiece.transform.position = targetPawn.transform.position;
+
+        Destroy(targetPawn.gameObject);
+        pieces[x, y] = newPiece;
+        PositionSinglePiece(x, y);
+
+        // Explicitly reset states
+        promotionScreen.SetActive(false);
+        specialMove = SpecialMove.None;
+    }
+
     //Operations
     private bool ContainsValidMove(ref List<Vector2Int> moves, Vector2Int pos) {
         for(int i = 0; i < moves.Count; i++) {
@@ -694,11 +751,13 @@ public class ChessBoard : MonoBehaviour {
         NetUtility.S_WELCOME += OnWelcomeServer;
         NetUtility.S_MAKE_MOVE += OnMakeMoveServer;
         NetUtility.S_REMATCH += OnRematchServer;
+        NetUtility.S_PROMOTION += OnPromotionServer;
 
         NetUtility.C_WELCOME += OnWelcomeClient;
         NetUtility.C_START_GAME += OnStartGameClient;
         NetUtility.C_MAKE_MOVE += OnMakeMoveClient;
         NetUtility.C_REMATCH += OnRematchClient;
+        NetUtility.C_PROMOTION += OnPromotionClient;
 
         GameUI.Instance.SetLocalGame += OnSetLocalGame;
     }
@@ -707,12 +766,14 @@ public class ChessBoard : MonoBehaviour {
         NetUtility.S_WELCOME -= OnWelcomeServer;
         NetUtility.S_MAKE_MOVE -= OnMakeMoveServer;
         NetUtility.S_REMATCH -= OnRematchServer;
+        NetUtility.S_PROMOTION -= OnPromotionServer;
 
 
         NetUtility.C_WELCOME -= OnWelcomeClient;
         NetUtility.C_START_GAME -= OnStartGameClient;
         NetUtility.C_MAKE_MOVE -= OnMakeMoveClient;        
         NetUtility.C_REMATCH -= OnRematchClient;
+        NetUtility.C_PROMOTION -= OnPromotionClient;
 
         GameUI.Instance.SetLocalGame -= OnSetLocalGame;
 
@@ -745,6 +806,19 @@ public class ChessBoard : MonoBehaviour {
 
     private void OnRematchServer(NetMessage msg, NetworkConnection cnn) {
         
+        Server.Instance.Broadcast(msg);
+    }
+
+    private void OnPromotionServer(NetMessage msg, NetworkConnection cnn) {
+        NetPromotion np = msg as NetPromotion;
+        
+        // Validate the promotion
+        if (np == null || np.teamId != currentTeam) {
+            Debug.LogWarning("Invalid server promotion");
+            return;
+        }
+
+        PromotePawn(np.newType);
         Server.Instance.Broadcast(msg);
     }
 
@@ -801,6 +875,27 @@ public class ChessBoard : MonoBehaviour {
         if(playerRematch[0] && playerRematch[1]) {
             GameReset();
         }
+    }
+
+    private void OnPromotionClient(NetMessage msg) {
+        NetPromotion np = msg as NetPromotion;
+        
+        // Additional validation
+        if (np == null || np.teamId != currentTeam) {
+            Debug.LogWarning("Invalid promotion message");
+            return;
+        }
+
+        // Ensure the pawn is in a promotable position
+        bool isValidPromotionRow = (np.teamId == 0 && np.y == 7) || (np.teamId == 1 && np.y == 0);
+        if (!isValidPromotionRow) {
+            Debug.LogWarning("Attempting promotion at invalid row");
+            return;
+        }
+
+        ChessBoard.Instance.PromotePawnAt(np.x, np.y, np.newType, np.teamId);
+        promotionScreen.SetActive(false);
+        specialMove = SpecialMove.None;
     }
 
     private void ShutdownRelay() {
