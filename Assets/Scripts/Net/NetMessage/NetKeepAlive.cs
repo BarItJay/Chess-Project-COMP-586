@@ -1,30 +1,33 @@
 using Unity.Collections;
 using Unity.Networking.Transport;
-using UnityEngine;
 
-public class NetKeepAlive : NetMessage {
-    public NetKeepAlive() {//Making the box
+public class NetKeepAlive : NetMessage
+{
+    public NetKeepAlive() // Package message
+    {
         Code = OpCode.KEEP_ALIVE;
     }
-
-    public NetKeepAlive(DataStreamReader reader) {//Receiving the box
+    public NetKeepAlive(DataStreamReader reader) // Receive message
+    {
         Code = OpCode.KEEP_ALIVE;
         Deserialize(reader);
     }
 
-    public override void Serialize(ref DataStreamWriter writer) {
+    public override void Serialize(ref DataStreamWriter writer)
+    {
         writer.WriteByte((byte)Code);
     }
+    public override void Deserialize(DataStreamReader reader)
+    {
 
-    public override void Deserialize(DataStreamReader reader) {
-        
     }
 
-    public override void ReceivedOnClient() {
+    public override void ReceivedOnClient()
+    {
         NetUtility.C_KEEP_ALIVE?.Invoke(this);
     }
-
-    public override void ReceivedOnServer(NetworkConnection cnn) {
-        NetUtility.S_KEEP_ALIVE.Invoke(this, cnn);
+    public override void ReceivedOnServer(NetworkConnection cnn)
+    {
+        NetUtility.S_KEEP_ALIVE?.Invoke(this, cnn);
     }
 }

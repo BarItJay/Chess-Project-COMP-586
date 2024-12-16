@@ -1,36 +1,37 @@
 using Unity.Collections;
-using UnityEngine;
 using Unity.Networking.Transport;
+using UnityEngine;
 
 public class NetWelcome : NetMessage
 {
-    public int AssignedTeam {set; get; }
+    public int AssignedTeam { set; get; }
 
-    public NetWelcome() {
+    public NetWelcome()
+    {
         Code = OpCode.WELCOME;
     }
-
-    public NetWelcome(DataStreamReader reader) {
+    public NetWelcome(DataStreamReader reader)
+    {
         Code = OpCode.WELCOME;
         Deserialize(reader);
     }
 
-    public override void Serialize(ref DataStreamWriter writer) {
+    public override void Serialize(ref DataStreamWriter writer)
+    {
         writer.WriteByte((byte)Code);
         writer.WriteInt(AssignedTeam);
     }
-
-    public override void Deserialize(DataStreamReader reader) {
-        //Byte already read in the NetUtility::OnData
+    public override void Deserialize(DataStreamReader reader)
+    {
         AssignedTeam = reader.ReadInt();
     }
 
-
-    public override void ReceivedOnClient() {
+    public override void ReceivedOnClient()
+    {
         NetUtility.C_WELCOME?.Invoke(this);
     }
-
-    public override void ReceivedOnServer(NetworkConnection cnn) {
+    public override void ReceivedOnServer(NetworkConnection cnn)
+    {
         NetUtility.S_WELCOME?.Invoke(this, cnn);
     }
 }

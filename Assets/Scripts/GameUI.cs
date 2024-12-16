@@ -1,3 +1,4 @@
+using System;
 using TMPro;
 using UnityEngine;
 
@@ -17,9 +18,12 @@ public class GameUI : MonoBehaviour {
     [SerializeField] private TMP_InputField addressInput;
     [SerializeField] private GameObject[] cameraAngles;
 
+    public Action<bool> SetLocalGame;
+
     
     private void Awake() {
         Instance = this;
+        RegisterEvents();
     }
 
     //Cameras
@@ -33,6 +37,7 @@ public class GameUI : MonoBehaviour {
     //Buttons
     public void OnLocalGameButton() {
         menuAnimator.SetTrigger("NoMenu");
+        SetLocalGame?.Invoke(true);
         server.Init(8007);
         client.Init("127.0.0.1", 8007);
     }
@@ -42,17 +47,15 @@ public class GameUI : MonoBehaviour {
     }
 
     public void OnOnlineHostButton() {
+        SetLocalGame?.Invoke(false);
         server.Init(8007);
         client.Init("127.0.0.1", 8007);
         menuAnimator.SetTrigger("HostMenu");
     }
 
     public void OnOnlineConnectButton() {
-        if (server != null && server.isActive) {
-            client.Init(addressInput.text, 8007);
-        } else {
-            Debug.LogError("Server is not active. Please start the server first.");
-        }
+        SetLocalGame?.Invoke(false);
+        client.Init(addressInput.text, 8007);
     }
 
     public void OnOnlineBackButton() {
@@ -65,9 +68,27 @@ public class GameUI : MonoBehaviour {
         menuAnimator.SetTrigger("OnlineMenu");
     }
 
+    public void OnLeaveFromGameMenu() {
+        ChangeCamera(CameraAngle.menu);
+        menuAnimator.SetTrigger("StartMenu");
+    }
     private void InitializeServerClient(string ip, ushort port) {
         Debug.Log($"Initializing server and client on IP: {ip}, Port: {port}");
         server.Init(port);
         client.Init(ip, port);
     }
+
+#region
+    private void RegisterEvents() {
+        NetUtility.C_START_GAME += OnStartGameClient;
+    }
+
+    private void UnRegisterEvents() {
+        NetUtility.C_START_GAME -= OnStartGameClient;
+    }
+
+    private void OnStartGameClient(NetMessage message) {
+        menuAnimator.SetTrigger("NoMenu");
+    }
+    #endregion
 }
